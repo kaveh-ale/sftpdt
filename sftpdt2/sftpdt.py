@@ -4,6 +4,7 @@ import stat
 import argparse
 import textwrap
 import time
+import keyring
 
 class SFTPdtClient(paramiko.SFTPClient):
     def __init__(self, *args, **kwargs):
@@ -54,16 +55,18 @@ def calc_exec_time(start_time,end_time):
     minutes, seconds = divmod(rem, 60)
     exec_duration  = ("{:0>2}:{:0>2}:{:0>2}".format(int(hours),int(minutes),int(seconds)))
     return exec_duration
-def start_download(ip,port,username,password,remote_dir,local_path):
+def start_download(ip,port,remote_dir,local_path):
     start_text = "###########################################################\n"
     start_text +=" ________________ SFTP Download Tool ______________________\n"
-    start_text +=" ___________________ Ver 1.0 Dev __________________________\n"
+    start_text +=" ___________________ Ver 2.0 Dev __________________________\n"
     start_text +="###########################################################\n"
     start_text +=""
     start_text +="Connecting to remote server @ " + ip + "..."
     log("","c")
     log(start_text,"pl")
     try:
+        username='cliadmin'
+        password=keyring.get_password('cliadmin','xkcd')
         transport = paramiko.Transport((ip, port))
         transport.connect(username=username, password=password)
         sftpdt = SFTPdtClient.from_transport(transport)
@@ -92,35 +95,32 @@ def main():
         prog='SFTPdt',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent('''\
-           SFTP Download Tool V1.0
+           SFTP Download Tool V2.0
            Developed by Kaveh Majidi @ ALE
            ---------------------------------------------------
            This tool can be used to download a directory from
            a remote server to a local machine using SFTP.
+           The credentials to login to target machine (OV) need to be set through keyring before running the script.
            Please see example.
 
-           Example : python3 sftpdt.py --ip=10.10.10.10 --username="admin" --password="serverpass" --remote_dir="backups" --local_path="/home/user/localbackup" -v
+           Example : python3 sftpdt.py --ip=10.10.10.10 --remote_dir="backups" --local_path="/home/user/localbackup" -v
 
            '''))
     parser.add_argument('--ip', metavar='IP ADDRESS',required=True,
                         help='IP address of the remote server')
-    parser.add_argument('--username',required=True,
-                        help='username to login to remote server')
-    parser.add_argument('--password',required=True,
-                        help='password to login to remote server')
     parser.add_argument('--remote_dir',metavar='DIR',required=True,
                         help='directory on the remote server to be downloaded, Ex. "backups"')
     parser.add_argument('--local_path',metavar='PATH',required=True,
-                        help='local path as the destination for download, Ex. "/home/user/backup"')
+                        help='local path as the destination for download, Ex. "/home/user/backup" this directory needs to be created on local system and  the user running the script should have write permission on this directory' )
     parser.add_argument('--port',default=22,
                         help='SFTP port number, default is 22')
     parser.add_argument('-nolog',action="store_true",
                         help='disables logging , by default logging is enabled')
     parser.add_argument('-v',action="store_true",
                         help='enables verbose mode')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+    parser.add_argument('--version', action='version', version='%(prog)s 2.0')
     args = parser.parse_args()
     nolog_flag = args.nolog
     verbose_flag=args.v
-    start_download(args.ip,args.port,args.username,args.password,args.remote_dir,args.local_path)
+    start_download(args.ip,args.port,args.remote_dir,args.local_path)
 main()
